@@ -61,8 +61,7 @@ typedef union
 
 } cmp32;
 
-
-uint cmp4bit(void *data1,void *data2){
+uint cmp4bit(const void *data1,const void *data2){
 
 		uint retdiff = 0;
 
@@ -181,7 +180,7 @@ static Handle<Value> compare(const Arguments& args) {
 		assert(status == 0);
 		return Undefined();
 	}else{
-		float val = (float)cmp4bit(Buffer::Data(buffer1_obj),Buffer::Data(buffer2_obj)) / MAXDIFF;
+		float val = (float)cmp4bit((const void*)Buffer::Data(buffer1_obj),(const void*)Buffer::Data(buffer2_obj)) / MAXDIFF;
 
 		return scope.Close(Number::New(val));
 	}
