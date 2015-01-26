@@ -5,7 +5,9 @@
 #include <node_buffer.h>
 #include <node_object_wrap.h>
 
+#ifndef NOFREEIMAGE
 #include <FreeImage.h>
+#endif
 
 #include <string.h>
 #include <stdio.h>
@@ -22,6 +24,7 @@ using namespace v8;
 
 #define MAXDIFF 0x4000 //16384
 
+#ifndef NOFREEIMAGE
 struct Baton {
 	uv_work_t request;
 	Persistent<Function> callback;
@@ -32,7 +35,7 @@ struct Baton {
 	u_int8_t* bits;
 	u_int16_t sum;
 };
-
+#endif
 
 typedef struct {
 	u_int8_t b2:4;
@@ -135,8 +138,8 @@ static void compareAfter(uv_work_t* req) {
 
 static Handle<Value> compare(const Arguments& args) {
 	HandleScope scope;
-	if (args.Length() < 3)
-		return ThrowException( Exception::TypeError(String::New("Expecting 3 arguments")));
+	if (args.Length() < 2)
+		return ThrowException( Exception::TypeError(String::New("Expecting 2 arguments")));
 
 	if (!Buffer::HasInstance(args[0]))
 		return ThrowException( Exception::TypeError( String::New("argument  1 must be a Buffer")));
@@ -144,8 +147,7 @@ static Handle<Value> compare(const Arguments& args) {
 	if (!Buffer::HasInstance(args[1]))
 		return ThrowException( Exception::TypeError( String::New("argument 2 must be a Buffer")));
 
-	if (!args[2]->IsFunction())
-		return ThrowException(Exception::TypeError(String::New("argument 3 must be a function")));
+
 
 #if NODE_MAJOR_VERSION == 0 && NODE_MINOR_VERSION < 10
 	Local < Object > buffer1_obj = args[0]->ToObject();
@@ -163,24 +165,30 @@ static Handle<Value> compare(const Arguments& args) {
 		return ThrowException(Exception::TypeError(String::New("Buffer::Length(buffer2_obj) != 512")));
 	}
 
-	Local < Function > callback = Local < Function > ::Cast(args[2]);
+	if (args.Length() > 2 && args[2]->IsFunction()){
+		Local < Function > callback = Local < Function > ::Cast(args[2]);
 
-	BatonCompare* baton = new BatonCompare();
-	baton->request.data = baton;
-	baton->callback = Persistent < Function > ::New(callback);
-	baton->data1 = (uint8_t *)Buffer::Data(buffer1_obj);
-	baton->data2 = (uint8_t *)Buffer::Data(buffer2_obj);
-	baton->val = 1;
+		BatonCompare* baton = new BatonCompare();
+		baton->request.data = baton;
+		baton->callback = Persistent < Function > ::New(callback);
+		baton->data1 = (uint8_t *)Buffer::Data(buffer1_obj);
+		baton->data2 = (uint8_t *)Buffer::Data(buffer2_obj);
+		baton->val = 1;
 
 
-	int status = uv_queue_work(uv_default_loop(), &baton->request, compareWork, (uv_after_work_cb) compareAfter);
+		int status = uv_queue_work(uv_default_loop(), &baton->request, compareWork, (uv_after_work_cb) compareAfter);
 
-	assert(status == 0);
-	return Undefined();
+		assert(status == 0);
+		return Undefined();
+	}else{
+		float val = (float)cmp4bit(Buffer::Data(buffer1_obj),Buffer::Data(buffer2_obj)) / MAXDIFF;
+
+		return scope.Close(Number::New(val));
+	}
 
 }
 
-
+#ifndef NOFREEIMAGE
 
 static void imageVectorWork(uv_work_t* req) {
 
@@ -360,13 +368,15 @@ static Handle<Value> imageVector(const Arguments& args) {
 	return Undefined();
 }
 
+#endif
 
 
 extern "C" {
 	void init(Handle<Object> target) {
 		HandleScope scope;
-
+#ifndef NOFREEIMAGE
 		target->Set(String::NewSymbol("imageVector"), FunctionTemplate::New(imageVector)->GetFunction());
+#endif
 		target->Set(String::NewSymbol("compare"), FunctionTemplate::New(compare)->GetFunction());
 		target->Set(String::NewSymbol("maxDiff"), Number::New(MAXDIFF));
 	}

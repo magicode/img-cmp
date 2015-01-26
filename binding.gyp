@@ -8,6 +8,7 @@
        "sources": [ 
             'src/img-cmp512.cc'
        ],
+#       'defines': ['NOFREEIMAGE'],
        'conditions': [
 		    ['makefreeimage=="true"', {
 		      'include_dirs':  [ "../deps/FreeImage/Dist/FreeImage.h" ],
