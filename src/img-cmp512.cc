@@ -197,8 +197,9 @@ static void imageVectorWork(uv_work_t* req) {
 
 	FIMEMORY * fiMemoryIn = NULL;
 	FIMEMORY * fiMemoryOut = NULL;
-	FIBITMAP * fiBitmap = NULL, *thumbnail1 = NULL, *thumbnail2 = NULL;
+	FIBITMAP * fiBitmap = NULL, *thumbnail1 = NULL, *thumbnail2 = NULL, *tmpImage = NULL;
 	uint8_t * bits = NULL;
+	int  bpp;
 
 	fiMemoryIn = baton->fiMemoryIn;	//FreeImage_OpenMemory((BYTE *)baton->imageBuffer,baton->imageBufferLength);
 
@@ -212,6 +213,13 @@ static void imageVectorWork(uv_work_t* req) {
 	if (!fiBitmap)
 		goto ret;
 
+	bpp = FreeImage_GetBPP(fiBitmap);
+
+	if(bpp != 32){
+		tmpImage = FreeImage_ConvertTo32Bits(fiBitmap);
+		FreeImage_Unload(fiBitmap);
+		fiBitmap = tmpImage;
+	}
 //	FILTER_BOX		  = 0,	// Box, pulse, Fourier window, 1st order (constant) b-spline
 //	FILTER_BICUBIC	  = 1,	// Mitchell & Netravali's two-param cubic filter
 //	FILTER_BILINEAR   = 2,	// Bilinear filter
